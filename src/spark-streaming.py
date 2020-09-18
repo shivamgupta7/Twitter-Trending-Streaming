@@ -41,9 +41,21 @@ def process_rdd(time, rdd):
         # get the top 20 hashtags from the table using SQL and print them
         hashtag_counts_df = sql_context.sql("select hashtag, hashtag_count from hashtags order by hashtag_count desc limit 20")
         hashtag_counts_df.show()
+        # call this method to prepare top 10 hashtags DF and send them
+        send_df_to_dashboard(hashtag_counts_df)
     except:
         e = sys.exc_info()[0]
         print("Error: %s" % e)
+
+def send_df_to_dashboard(df):
+    # extract the hashtags from dataframe and convert them into array
+    top_tags = [str(t.hashtag) for t in df.select("hashtag").collect()]
+    # extract the counts from dataframe and convert them into array
+    tags_count = [p.hashtag_count for p in df.select("hashtag_count").collect()]
+    # initialize and send the data through REST API
+    url = 'http://localhost:5000/updateData'
+    request_data = {'label': str(top_tags), 'data': str(tags_count)}
+    requests.post(url, data=request_data)
 
 # split each tweet into words
 words = dataStream.flatMap(lambda line: line.split(" "))
